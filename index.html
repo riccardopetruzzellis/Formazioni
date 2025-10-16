@@ -3,157 +3,144 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Formazioni Interattive</title>
+<title>Formazioni Drag & Drop</title>
 <style>
   body {
     margin: 0;
-    background: url('campo.png') no-repeat center center;
-    background-size: cover;
-    height: 100vh;
-    overflow: hidden;
     font-family: Arial, sans-serif;
+    display: flex;
+    height: 100vh;
   }
-  .player {
+  #field {
+    flex: 2;
+    background: url('campo.jpg') no-repeat center center;
+    background-size: cover;
+    position: relative;
+  }
+  .role {
     position: absolute;
-    width: 55px;
-    height: 55px;
-    background-color: rgba(255,255,255,0.85);
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    text-align: center;
-    line-height: 55px;
+    background: rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: bold;
-    color: #222;
-    box-shadow: 0 0 5px rgba(0,0,0,0.3);
     cursor: pointer;
-    transition: all 0.3s ease;
   }
-  .controls {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.6);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 12px;
+  #playersList {
+    flex: 1;
+    background: #f2f2f2;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .playerItem {
+    padding: 8px 12px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: grab;
+  }
+  .playerItem.dragging {
+    opacity: 0.5;
   }
   select {
-    padding: 4px 8px;
-    font-size: 14px;
-    border-radius: 6px;
+    margin-bottom: 10px;
+    padding: 6px;
+    width: 100%;
   }
 </style>
 </head>
 <body>
 
-<div id="players"></div>
+<div id="field"></div>
 
-<div class="controls">
-  <select id="moduleSelect" onchange="setFormation(this.value)">
-    <option>4-4-2</option>
-    <option>4-3-3</option>
-    <option>4-3-1-2</option>
-    <option>4-3-2-1</option>
-    <option>4-5-1</option>
-    <option>4-2-3-1</option>
-    <option>3-4-3</option>
-    <option>3-5-2</option>
-    <option>3-4-1-2</option>
-    <option>3-4-2-1</option>
-    <option>5-4-1</option>
-    <option>5-3-2</option>
-    <option>5-2-1-2</option>
-    <option>5-2-2-1</option>
-    <option>5-2-3</option>
+<div id="playersList">
+  <select id="teamSelect">
+    <option value="TeamA">Team A</option>
+    <option value="TeamB">Team B</option>
   </select>
+  <div id="list"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
 <script>
-// Moduli con coordinate top/left (%)
-const formations = {
-  "4-4-2": { GK:[85,45], LB:[70,15], CB1:[70,35], CB2:[70,55], RB:[70,75], LM:[55,20], CM1:[55,40], CM2:[55,60], RM:[55,80], ST1:[30,35], ST2:[30,55] },
-  "4-3-3": { GK:[85,45], LB:[70,20], CB1:[70,38], CB2:[70,55], RB:[70,75], CM1:[55,35], CM2:[55,55], CAM:[45,45], LW:[30,20], RW:[30,70], ST:[25,45] },
-  "4-3-1-2": { GK:[85,45], LB:[70,20], CB1:[70,38], CB2:[70,55], RB:[70,75], CM1:[55,35], CM2:[55,55], CAM:[40,45], ST1:[25,35], ST2:[25,55] },
-  "4-3-2-1": { GK:[85,45], LB:[70,20], CB1:[70,38], CB2:[70,55], RB:[70,75], CM1:[55,35], CM2:[55,55], CAM1:[40,35], CAM2:[40,55], ST:[25,45] },
-  "4-5-1": { GK:[85,45], LB:[70,20], CB1:[70,38], CB2:[70,55], RB:[70,75], CM1:[55,25], CM2:[55,40], CM3:[55,55], CM4:[55,70], CAM:[45,45], ST:[25,45] },
-  "4-2-3-1": { GK:[85,45], LB:[70,20], CB1:[70,38], CB2:[70,55], RB:[70,75], CM1:[55,35], CM2:[55,55], LW:[40,20], CAM:[40,45], RW:[40,70], ST:[25,45] },
-  "3-4-3": { GK:[85,45], CB1:[70,30], CB2:[70,45], CB3:[70,60], LM:[55,15], CM1:[55,35], CM2:[55,55], RM:[55,75], LW:[30,20], ST:[30,45], RW:[30,70] },
-  "3-5-2": { GK:[85,45], CB1:[70,30], CB2:[70,45], CB3:[70,60], LM:[55,15], CM1:[55,35], CM2:[55,55], RM:[55,75], CAM:[40,45], ST1:[30,35], ST2:[30,55] },
-  "3-4-1-2": { GK:[85,45], CB1:[70,30], CB2:[70,45], CB3:[70,60], LM:[55,15], CM1:[55,35], CM2:[55,55], RM:[55,75], CAM:[40,45], ST1:[30,35], ST2:[30,55] },
-  "3-4-2-1": { GK:[85,45], CB1:[70,30], CB2:[70,45], CB3:[70,60], LM:[55,15], CM1:[55,35], CM2:[55,55], RM:[55,75], CAM1:[40,35], CAM2:[40,55], ST:[25,45] },
-  "5-4-1": { GK:[85,45], LB:[70,10], CB1:[70,30], CB2:[70,45], CB3:[70,55], RB:[70,75], LM:[55,20], CM1:[55,40], CM2:[55,60], RM:[55,80], ST:[25,45] },
-  "5-3-2": { GK:[85,45], LB:[70,10], CB1:[70,30], CB2:[70,45], CB3:[70,55], RB:[70,75], CM1:[55,35], CM2:[55,55], CM3:[55,45], ST1:[30,35], ST2:[30,55] },
-  "5-2-1-2": { GK:[85,45], LB:[70,10], CB1:[70,30], CB2:[70,45], CB3:[70,55], RB:[70,75], CM1:[55,35], CM2:[55,55], CAM:[40,45], ST1:[25,35], ST2:[25,55] },
-  "5-2-2-1": { GK:[85,45], LB:[70,10], CB1:[70,30], CB2:[70,45], CB3:[70,55], RB:[70,75], CM1:[55,35], CM2:[55,55], CAM1:[40,35], CAM2:[40,55], ST:[25,45] },
-  "5-2-3": { GK:[85,45], LB:[70,10], CB1:[70,30], CB2:[70,45], CB3:[70,55], RB:[70,75], CM1:[55,35], CM2:[55,55], LW:[40,20], CAM:[40,45], RW:[40,70], ST:[25,45] }
+// Dati demo giocatori
+const teams = {
+  TeamA: ["Portiere A","Difensore A1","Difensore A2","Centrocampista A1","Centrocampista A2","Attaccante A1","Attaccante A2"],
+  TeamB: ["Portiere B","Difensore B1","Difensore B2","Centrocampista B1","Centrocampista B2","Attaccante B1","Attaccante B2"]
 };
 
-// Giocatori statici di esempio (da sostituire con dati Glide)
-const teamPlayers = {
-  GK:["Portiere1","Portiere2"],
-  LB:["Difensore1","Difensore2"],
-  CB1:["Difensore3","Difensore4"],
-  CB2:["Difensore5","Difensore6"],
-  CB3:["Difensore7","Difensore8"],
-  RB:["Difensore9","Difensore10"],
-  LM:["Centrocampista1","Centrocampista2"],
-  CM1:["Centrocampista3","Centrocampista4"],
-  CM2:["Centrocampista5","Centrocampista6"],
-  CM3:["Centrocampista7","Centrocampista8"],
-  CM4:["Centrocampista9","Centrocampista10"],
-  RM:["Centrocampista11","Centrocampista12"],
-  CAM:["Centrocampista13","Centrocampista14"],
-  CAM1:["Centrocampista15","Centrocampista16"],
-  CAM2:["Centrocampista17","Centrocampista18"],
-  LW:["Attaccante1","Attaccante2"],
-  RW:["Attaccante3","Attaccante4"],
-  ST:["Attaccante5","Attaccante6"],
-  ST1:["Attaccante7","Attaccante8"],
-  ST2:["Attaccante9","Attaccante10"]
+// Coordinate demo modulo 4-4-2 (%)
+const formation = {
+  GK:[85,45], LB:[70,15], CB1:[70,35], CB2:[70,55], RB:[70,75],
+  LM:[55,20], CM1:[55,40], CM2:[55,60], RM:[55,80],
+  ST1:[30,35], ST2:[30,55]
 };
 
-// Contenitore pedine
-const container = document.getElementById('players');
+const field = document.getElementById('field');
 
-// Funzione per creare pedine del modulo selezionato
-function setFormation(f) {
-  const formation = formations[f];
-  container.innerHTML = ""; // rimuove pedine vecchie
+// Crea pedine ruolo
+Object.keys(formation).forEach(role=>{
+  const div = document.createElement('div');
+  div.classList.add('role');
+  div.id = role;
+  div.textContent = role;
+  const [top,left] = formation[role];
+  div.style.top = top + '%';
+  div.style.left = left + '%';
+  field.appendChild(div);
+});
 
-  Object.keys(formation).forEach(role => {
-    const el = document.createElement('div');
-    el.classList.add('player');
-    el.textContent = role;
-    el.dataset.role = role;
-    const [top,left] = formation[role];
-    el.style.top = top + '%';
-    el.style.left = left + '%';
+// Mostra lista giocatori
+const listContainer = document.getElementById('list');
+const teamSelect = document.getElementById('teamSelect');
 
-    // click per selezionare giocatore
-    el.addEventListener('click', () => {
-      const select = document.createElement('select');
-      teamPlayers[role]?.forEach(player => {
-        const option = document.createElement('option');
-        option.value = player;
-        option.text = player;
-        select.appendChild(option);
-      });
-      select.value = el.dataset.player || "";
-      select.onchange = () => {
-        el.textContent = select.value;
-        el.dataset.player = select.value;
-        select.remove();
-      };
-      el.textContent = "";
-      el.appendChild(select);
-    });
-
-    container.appendChild(el);
+function updateList(){
+  const team = teamSelect.value;
+  listContainer.innerHTML = '';
+  teams[team].forEach(player=>{
+    const div = document.createElement('div');
+    div.classList.add('playerItem');
+    div.textContent = player;
+    listContainer.appendChild(div);
   });
 }
 
-// Inizializza con primo modulo
-setFormation(document.getElementById('moduleSelect').value);
+teamSelect.addEventListener('change', updateList);
+updateList();
+
+// Drag & drop con interact.js
+interact('.playerItem').draggable({
+  inertia: true,
+  autoScroll: true,
+  onmove: dragMoveListener,
+  onend: event => { event.target.style.transform = 'translate(0,0)'; }
+});
+
+function dragMoveListener (event) {
+  const target = event.target;
+  const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+  const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+  target.style.transform = `translate(${x}px, ${y}px)`;
+  target.setAttribute('data-x', x);
+  target.setAttribute('data-y', y);
+}
+
+// Pedine accettano drop
+Object.keys(formation).forEach(role=>{
+  interact('#'+role).dropzone({
+    accept: '.playerItem',
+    overlap: 0.7,
+    ondrop: event=>{
+      const roleDiv = event.target;
+      roleDiv.textContent = event.relatedTarget.textContent;
+      // reset del draggable
+      event.relatedTarget.style.transform = 'translate(0,0)';
+    }
+  });
+});
 </script>
 
 </body>
