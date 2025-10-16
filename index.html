@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formazioni</title>
+<style>
+  body {
+    margin: 0;
+    background: url('campo.png') no-repeat center center;
+    background-size: cover;
+    height: 100vh;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+  }
+  .player {
+    position: absolute;
+    width: 55px;
+    height: 55px;
+    background-color: rgba(255,255,255,0.85);
+    border-radius: 50%;
+    text-align: center;
+    line-height: 55px;
+    font-weight: bold;
+    color: #222;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: all 0.4s ease;
+  }
+  .controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+  }
+  button {
+    margin: 0 5px;
+    padding: 8px 16px;
+    background: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:hover { background: #ddd; }
+</style>
+</head>
+<body>
+
+<!-- Giocatori -->
+<div id="players"></div>
+
+<!-- Controlli -->
+<div class="controls">
+  <button onclick="setFormation('4-3-3')">4-3-3</button>
+  <button onclick="setFormation('4-2-3-1')">4-2-3-1</button>
+  <button onclick="setFormation('3-5-2')">3-5-2</button>
+</div>
+
+<script>
+const players = [
+  "GK","LB","CB1","CB2","RB","CM1","CM2","CAM","LW","RW","ST"
+];
+
+// Coordinate per modulo (% dal top/left)
+const formations = {
+  "4-3-3": {
+    GK:[85,45], LB:[70,20], CB1:[70,38], CB2:[70,55], RB:[70,75],
+    CM1:[55,35], CM2:[55,55], CAM:[45,45],
+    LW:[30,20], RW:[30,70], ST:[25,45]
+  },
+  "4-2-3-1": {
+    GK:[85,45], LB:[70,20], CB1:[70,38], CB2:[70,55], RB:[70,75],
+    CM1:[55,40], CM2:[55,50],
+    LW:[40,20], CAM:[40,45], RW:[40,70], ST:[25,45]
+  },
+  "3-5-2": {
+    GK:[85,45], CB1:[70,30], CB2:[70,45], CB3:[70,60],
+    CM1:[55,35], CM2:[55,55], CAM:[45,45],
+    LM:[50,20], RM:[50,70], ST1:[30,38], ST2:[30,55]
+  }
+};
+
+// Crea pedine
+const container = document.getElementById('players');
+players.forEach(p => {
+  const el = document.createElement('div');
+  el.classList.add('player');
+  el.textContent = p;
+  container.appendChild(el);
+});
+
+function setFormation(f) {
+  const formation = formations[f];
+  document.querySelectorAll('.player').forEach((el,i)=>{
+    const role = el.textContent;
+    if (formation[role]) {
+      const [top,left] = formation[role];
+      el.style.top = top + '%';
+      el.style.left = left + '%';
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+setFormation('4-3-3');
+</script>
+
+</body>
+</html>
